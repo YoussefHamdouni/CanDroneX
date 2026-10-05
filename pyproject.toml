@@ -1,0 +1,131 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "candronex"
+version = "0.1.0"
+description = "CanDroneX — plateforme B2B de connectivité 5G pour drones (LOG430, Phase 1)"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115,<1",
+    "uvicorn[standard]>=0.30",
+    "SQLAlchemy>=2.0,<3",
+    "psycopg[binary]>=3.2",
+    "alembic>=1.13",
+    "pydantic>=2.7,<3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "httpx>=0.27",
+    "requests>=2.32",
+    "testcontainers[postgres]>=4.8",
+    "import-linter>=2.1",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Pas de cache : le conteneur s'exécute avec un utilisateur sans droit d'écriture dans /app.
+addopts = "-p no:cacheprovider"
+pythonpath = ["src", "."]
+markers = [
+    "integration: exige Docker (base PostgreSQL conteneurisée)",
+    "e2e: exige l'environnement démarré par docker compose",
+]
+
+# ---------------------------------------------------------------------------
+# Règles d'architecture (vérifiées par `lint-imports`, voir §5.3 du rapport)
+# ---------------------------------------------------------------------------
+[tool.importlinter]
+root_package = "candronex"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Le domaine ne dépend d'aucune technologie"
+type = "forbidden"
+source_modules = [
+    "candronex.identity.domain",
+    "candronex.fleet.domain",
+    "candronex.catalog.domain",
+    "candronex.ordering.domain",
+]
+forbidden_modules = ["sqlalchemy", "fastapi", "pydantic", "starlette", "alembic", "psycopg"]
+
+[[tool.importlinter.contracts]]
+name = "La couche application ne dépend d'aucune technologie"
+type = "forbidden"
+source_modules = [
+    "candronex.identity.application",
+    "candronex.fleet.application",
+    "candronex.catalog.application",
+    "candronex.ordering.application",
+]
+forbidden_modules = ["sqlalchemy", "fastapi", "pydantic", "starlette"]
+
+[[tool.importlinter.contracts]]
+name = "Couches du module Fleet"
+type = "layers"
+layers = ["candronex.fleet.adapter", "candronex.fleet.application", "candronex.fleet.domain"]
+
+[[tool.importlinter.contracts]]
+name = "Couches du module Ordering"
+type = "layers"
+layers = ["candronex.ordering.adapter", "candronex.ordering.application", "candronex.ordering.domain"]
+
+[[tool.importlinter.contracts]]
+name = "Couches du module Catalog"
+type = "layers"
+layers = ["candronex.catalog.adapter", "candronex.catalog.application", "candronex.catalog.domain"]
+
+[[tool.importlinter.contracts]]
+name = "Couches du module Identity"
+type = "layers"
+layers = ["candronex.identity.adapter", "candronex.identity.application", "candronex.identity.domain"]
+
+[[tool.importlinter.contracts]]
+name = "Seule l'interface publiée de Fleet est accessible"
+type = "forbidden"
+source_modules = ["candronex.ordering", "candronex.catalog", "candronex.identity", "candronex.audit", "candronex.platform"]
+forbidden_modules = ["candronex.fleet.domain", "candronex.fleet.application", "candronex.fleet.adapter"]
+
+[[tool.importlinter.contracts]]
+name = "Seule l'interface publiée de Catalog est accessible"
+type = "forbidden"
+source_modules = ["candronex.ordering", "candronex.fleet", "candronex.identity", "candronex.audit", "candronex.platform"]
+forbidden_modules = ["candronex.catalog.domain", "candronex.catalog.application", "candronex.catalog.adapter"]
+
+[[tool.importlinter.contracts]]
+name = "Seule l'interface publiée d'Identity est accessible"
+type = "forbidden"
+source_modules = ["candronex.ordering", "candronex.fleet", "candronex.catalog", "candronex.audit", "candronex.platform"]
+forbidden_modules = ["candronex.identity.domain", "candronex.identity.application", "candronex.identity.adapter"]
+
+[[tool.importlinter.contracts]]
+name = "Seule l'interface publiée d'Audit est accessible"
+type = "forbidden"
+source_modules = ["candronex.ordering", "candronex.fleet", "candronex.catalog", "candronex.identity", "candronex.platform"]
+forbidden_modules = ["candronex.audit.adapter"]
+
+[[tool.importlinter.contracts]]
+name = "Personne ne dépend d'Ordering (graphe acyclique, §4.2)"
+type = "forbidden"
+source_modules = ["candronex.fleet", "candronex.catalog", "candronex.identity", "candronex.audit", "candronex.platform", "candronex.shared"]
+forbidden_modules = ["candronex.ordering"]
+
+[[tool.importlinter.contracts]]
+name = "La plateforme ne dépend d'aucun module métier"
+type = "forbidden"
+source_modules = ["candronex.platform"]
+forbidden_modules = ["candronex.identity", "candronex.fleet", "candronex.catalog", "candronex.ordering", "candronex.audit"]
+
+[[tool.importlinter.contracts]]
+name = "Le noyau partagé ne dépend d'aucun module"
+type = "forbidden"
+source_modules = ["candronex.shared"]
+forbidden_modules = ["candronex.identity", "candronex.fleet", "candronex.catalog", "candronex.ordering", "candronex.audit", "candronex.platform"]
