@@ -43,7 +43,7 @@ jobs:
         run: pytest tests/unit tests/architecture -v
 
       - name: Contrats import-linter
-        run: lint-imports
+        run: lint-imports --no-cache
 
   tests-conteneur:
     name: Tests dans le conteneur (intégration et bout en bout)
