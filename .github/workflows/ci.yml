@@ -69,7 +69,7 @@ jobs:
         run: docker compose exec -T app pytest -v
 
       - name: Contrats import-linter dans le conteneur
-        run: docker compose exec -T app lint-imports
+        run: docker compose exec -T app lint-imports --no-cache
 
       - name: Journaux en cas d'échec
         if: failure()
